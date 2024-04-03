@@ -8,6 +8,7 @@ export function useAppContext() {
 
 export const AppProvider = ({ children }) => {
   const [sharedState, setSharedState] = useState({
+    origPDF: null,
     foldedPDF: null,
     pageNumberFolded: 1,
     previewWidth: undefined,

@@ -3,23 +3,25 @@ import Directions from "./Directions";
 import Footer from "./Footer";
 import Title from "./Title";
 import Preview from "./Preview";
+import Controls from "./Controls";
 import { Box, Button, Typography } from "@mui/material";
-import Impose from "../lib/imposifiy.mjs";
+import Impose from "../lib/imposify.mjs";
 import { Document, Page, pdfjs } from "react-pdf";
 import { useAppContext } from '../context/AppContext';
 
 const Main = () => {
-    // Create a ref to store the file input element
-    const fileInputRef = useRef(null);
+
     // Boolean to determine if we are dragging a file
     const [isDragging, setIsDragging] = useState(false);
+    const [mode, setMode] = useState(0);
+    
     const { sharedState, setSharedState } = useAppContext();
-
     // our pdf manipulation class itself
     const [impose] = useState(() => new Impose());
 
     // Set the path to the PDF.js worker from a CDN
     pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+
 
     // Turns the spinner on/off via CSS.  doing it this way instead of
     // via react state seems to result in a quicker loading initial
@@ -36,25 +38,6 @@ const Main = () => {
             spinBox.classList = "hidden";
         }
     };
-
-    // "download pdf" gets clicked by the user.  adds a anchor
-    // to the page and triggers it to start the file download.
-    const handleDownloadButtonClick = () => {
-        try {
-            const url = URL.createObjectURL(sharedState.foldedPDF);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = "folded-pdf.pdf";
-            document.body.appendChild(link);
-            link.click();
-            // don't leave the link dangling
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-        } catch (error) {
-            console.error("Error generating download:", error);
-        }
-    };
-
 
     // pdf file passed to imposify via drag and drop or by open
     // menu.  currently this function loads a pdf, imposes it
@@ -76,7 +59,6 @@ const Main = () => {
             // generate blob from pdf
             if (completedPdf) {
                 const blob = new Blob([completedPdf], { type: "application/pdf" });
-                console.log(`blob: ${blob}`);
                 console.log("setting state for preview rendering")
                 setSharedState({...sharedState, foldedPDF: blob, loaded: true});
                 console.log(sharedState);
@@ -104,26 +86,18 @@ const Main = () => {
             return {...currentState, previewWidth: newPreviewWidth};
         });
     }, []);
-    
-    const handleOpenButtonClick = () => {
-        // Programmatically click the hidden file input
-        fileInputRef.current.click();
-    };
 
-    // handle open button
-    const handleFileSelected = async (event) => {
-        const file = event.target.files[0];
-        if (file) {
-            processFile(file);
-        }
-    };
+    useEffect(() => {
+        processFile(sharedState.origPDF);
+    }, [sharedState.origPDF]);
+    
     // handle drag and drop
     const handleDrop = async (event) => {
         event.preventDefault();
         setIsDragging(false); // Reset drag state on drop
         const file = event.dataTransfer.files[0];
         if (file && file.type === "application/pdf") {
-            processFile(file);
+            setSharedState({...sharedState, origPDF: file});
         }
     };
     // handle dragging activity overlay
@@ -180,19 +154,9 @@ const Main = () => {
                     </Box>
                 )} 
                 <Title></Title>
-                <Box display="flex">
-                    <Button onClick={handleOpenButtonClick}>Open PDF</Button>
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileSelected}
-                        style={{ display: "none" }} // Hide the file input
-                        accept="application/pdf" // Accept only PDF files
-                    />
-                    <Box id="pdfDisplayBlock">
-                        <Button disabled={!sharedState.loaded} onClick={handleDownloadButtonClick}>Download PDF</Button>
-                    </Box>
-                </Box>
+                <Controls></Controls>
+
+                {/* two main columns here */}
                 <Box 
                 display="flex" 
                 margin="auto"
@@ -201,13 +165,18 @@ const Main = () => {
                 flexDirection="row"
                 class="column-fold"
                 >
-                    <Directions></Directions>
+                    {/* Left column, selectable, defaults to Directions */}
+                    {mode === 0 && (
+                        <Directions></Directions>
+                    )}
+                    {/* Right column, preview */}
                     <Box minWidth="50%" maxWidth="50%" textAlign="left" id="testFolded" marginBottom="20px">
                         <Preview></Preview>
                     </Box>
                 </Box>
-                <Footer></Footer>
-            </Box>
+            {/* Footer has version and donation link */}
+            <Footer></Footer>
+        </Box>
     );
 };
 
