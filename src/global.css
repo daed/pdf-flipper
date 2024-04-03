@@ -93,6 +93,20 @@ a {
   }
 }
 
+@media (min-width: 800px) {
+  .container {
+    padding: 40px; /* Example change */
+  }
+  .full-mobile {
+    width: 80%; /* Example change */
+  }
+}
+
+.column { 
+  display: flex;
+  flex-direction: column;
+}
+
 .doc-box {
   height: 100%;
   width: 100%;
