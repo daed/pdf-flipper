@@ -1,31 +1,27 @@
 import React, { useEffect,  useRef, useState } from "react";
 import Directions from "./Directions";
-import Spinner from "./Spinner";
 import Footer from "./Footer";
+import Title from "./Title";
+import Preview from "./Preview";
+import Controls from "./Controls";
 import { Box, Button, Typography } from "@mui/material";
-import Impose from "../lib/imposifiy.mjs";
+import Impose from "../lib/imposify.mjs";
 import { Document, Page, pdfjs } from "react-pdf";
+import { useAppContext } from '../context/AppContext';
 
 const Main = () => {
-    // Create a ref to store the file input element
-    const fileInputRef = useRef(null);
-    // Boolean to determine if we are loaded
-    const [loaded, setLoaded] = useState(false);
+
     // Boolean to determine if we are dragging a file
     const [isDragging, setIsDragging] = useState(false);
-    // holds the pdf binary blob used in the preview
-    const [foldedPDF, setFoldedPDF] = useState(null);
-    // number of pages in the folded pdf
-    const [numPagesFolded, setNumPagesFolded] = useState(null);
-    // current page of the pdf preview
-    const [pageNumberFolded, setPageNumberFolded] = useState(1);
-    // auto-calculated width of the pdf preview (in pixels)
-    const [previewWidth, setPreviewWidth] = useState();
+    const [mode, setMode] = useState(0);
+    
+    const { sharedState, setSharedState } = useAppContext();
     // our pdf manipulation class itself
     const [impose] = useState(() => new Impose());
 
     // Set the path to the PDF.js worker from a CDN
     pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+
 
     // Turns the spinner on/off via CSS.  doing it this way instead of
     // via react state seems to result in a quicker loading initial
@@ -43,53 +39,13 @@ const Main = () => {
         }
     };
 
-    // runs after the pdf is folded and the preview is rendering
-    const onPDFFoldSuccess = ({ numPages }) => {
-        console.log("onPDFFoldSuccess: pdf should have loaded correctly");
-        setLoaded(true);
-        setNumPagesFolded(numPages);
-    };
-
-    // move preview to the previous set of pages
-    const decrementFolded = () => {
-        if(pageNumberFolded - 1 >= 1) // Updated to prevent going below 1
-            setPageNumberFolded(pageNumberFolded - 1);
-    };
-
-    // move preview to the next set of pages
-    const incrementFolded = () => {
-        if(pageNumberFolded + 1 <= numPagesFolded)
-            setPageNumberFolded(pageNumberFolded + 1);
-    };
-
-
-
-    // "download pdf" gets clicked by the user.  adds a anchor
-    // to the page and triggers it to start the file download.
-    const handleDownloadButtonClick = () => {
-        try {
-            const url = URL.createObjectURL(foldedPDF);
-            const link = document.createElement("a");
-            link.href = url;
-            link.download = "folded-pdf.pdf";
-            document.body.appendChild(link);
-            link.click();
-            // don't leave the link dangling
-            document.body.removeChild(link);
-            URL.revokeObjectURL(url);
-        } catch (error) {
-            console.error("Error generating download:", error);
-        }
-    };
-
-
     // pdf file passed to imposify via drag and drop or by open
     // menu.  currently this function loads a pdf, imposes it
     // via a simple two-page spread method, converts it back to
     // a pdf blob, and prepares it for rendering.
     const processFile = async (file) => {
         handleResize();
-        setPageNumberFolded(1);
+        setSharedState({...sharedState, pageNumberFolded: 1});
         let completedPDF = false;
         try {
             setSpinner(true);
@@ -104,8 +60,8 @@ const Main = () => {
             if (completedPdf) {
                 const blob = new Blob([completedPdf], { type: "application/pdf" });
                 console.log("setting state for preview rendering")
-                setFoldedPDF(blob);
-                setLoaded(true);
+                setSharedState({...sharedState, foldedPDF: blob, loaded: true});
+                console.log(sharedState);
             }
             else {
                 throw new Error(`completedPDF was ${completedPDF}`);
@@ -117,35 +73,31 @@ const Main = () => {
         setTimeout(() => setSpinner(false), 1250);
     };
 
-
-    // we have to calculate the size of the preview canvas outside of css
     const handleResize = () => {
-        if (window.innerWidth > 599) {
-            setPreviewWidth(window.innerWidth * 0.4);
-        } else {
-            setPreviewWidth(window.innerWidth * 0.8);
-        }
+        setSharedState(currentState => {
+            const newPreviewWidth = window.innerWidth > 599 ? window.innerWidth * 0.4 : window.innerWidth * 0.8;
+            return {...currentState, previewWidth: newPreviewWidth};
+        });
     };
 
-    const handleOpenButtonClick = () => {
-        // Programmatically click the hidden file input
-        fileInputRef.current.click();
-    };
+    useEffect(() => {
+        setSharedState(currentState => {
+            const newPreviewWidth = window.innerWidth > 599 ? window.innerWidth * 0.4 : window.innerWidth * 0.8;
+            return {...currentState, previewWidth: newPreviewWidth};
+        });
+    }, []);
 
-    // handle open button
-    const handleFileSelected = async (event) => {
-        const file = event.target.files[0];
-        if (file) {
-            processFile(file);
-        }
-    };
+    useEffect(() => {
+        processFile(sharedState.origPDF);
+    }, [sharedState.origPDF]);
+    
     // handle drag and drop
     const handleDrop = async (event) => {
         event.preventDefault();
         setIsDragging(false); // Reset drag state on drop
         const file = event.dataTransfer.files[0];
         if (file && file.type === "application/pdf") {
-            processFile(file);
+            setSharedState({...sharedState, origPDF: file});
         }
     };
     // handle dragging activity overlay
@@ -159,7 +111,6 @@ const Main = () => {
         event.preventDefault();
         setIsDragging(false); // Reset drag state when leaving the drop area
     };
-
 
     useEffect(() => {
         window.addEventListener('resize', handleResize);
@@ -202,23 +153,10 @@ const Main = () => {
                         </Typography>
                     </Box>
                 )} 
-                <Box>
-                    <h1>Imposify</h1>
-                    <h2>the free book imposition tool</h2>
-                </Box>
-                <Box display="flex">
-                    <Button onClick={handleOpenButtonClick}>Open PDF</Button>
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        onChange={handleFileSelected}
-                        style={{ display: "none" }} // Hide the file input
-                        accept="application/pdf" // Accept only PDF files
-                    />
-                    <Box id="pdfDisplayBlock">
-                        <Button disabled={!loaded} onClick={handleDownloadButtonClick}>Download PDF</Button>
-                    </Box>
-                </Box>
+                <Title></Title>
+                <Controls></Controls>
+
+                {/* two main columns here */}
                 <Box 
                 display="flex" 
                 margin="auto"
@@ -227,38 +165,18 @@ const Main = () => {
                 flexDirection="row"
                 class="column-fold"
                 >
-                    <Directions></Directions>
+                    {/* Left column, selectable, defaults to Directions */}
+                    {mode === 0 && (
+                        <Directions></Directions>
+                    )}
+                    {/* Right column, preview */}
                     <Box minWidth="50%" maxWidth="50%" textAlign="left" id="testFolded" marginBottom="20px">
-                        <h3>Preview</h3>
-                        <Box height id="spinner-box" className="hidden" >
-                            <Box display="flex" minHeight="80%" alignItems="baseline" justifyContent="center">
-                                <Box margin="20%">
-                                    <Spinner />
-                                </Box>
-                            </Box>
-                        </Box>
-                        <Box maxWidth="100%" height="100%" margin="auto" id="document-box" className="doc-box" display="flex" flexDirection="column" justifyContent="space-between">
-                            <Box width={previewWidth} margin="auto" minHeight="80%">
-                                    <Document width={previewWidth} file={foldedPDF} onLoadSuccess={onPDFFoldSuccess}>
-                                        <Page
-                                            pageNumber={pageNumberFolded}
-                                            renderAnnotationLayer={false}
-                                            renderTextLayer={false}
-                                            width={previewWidth}
-                                            >
-
-                                        </Page>
-                                    </Document>
-                            </Box>
-                            <Box display="flex" width="100%" justifyContent="center">
-                                <Button style={{ width: "50%", fontSize: "40px" }} onClick={decrementFolded}> ⇐ </Button>
-                                <Button style={{ width: "50%", fontSize: "40px" }} onClick={incrementFolded}> ⇒ </Button>
-                            </Box>
-                        </Box>
+                        <Preview></Preview>
                     </Box>
                 </Box>
-                <Footer></Footer>
-            </Box>
+            {/* Footer has version and donation link */}
+            <Footer></Footer>
+        </Box>
     );
 };
 

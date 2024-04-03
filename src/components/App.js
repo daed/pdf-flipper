@@ -1,6 +1,6 @@
 import React from 'react';
 import Main from './Main';
-
+import { AppProvider } from '../context/AppContext';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 
 const theme = createTheme({
@@ -35,9 +35,11 @@ export default class App extends React.Component {
     render() {
         return (
             <ThemeProvider theme={theme}>
+              <AppProvider>
                 <div class="container">
                     <Main />
                 </div>
+              </AppProvider>
             </ThemeProvider>
         );
     }
