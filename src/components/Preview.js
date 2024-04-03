@@ -10,11 +10,11 @@ const Preview = () => {
     // runs after the pdf is folded and the preview is rendering
     const onPDFFoldSuccess = ({ numPages }) => {
         console.log("onPDFFoldSuccess: pdf should have loaded correctly");
-        
         setSharedState({ ...sharedState,
-                        numPagesFolded: numPages,
-                        loaded: true
+            numPagesFolded: numPages,
+            loaded: true
         });
+        console.log(sharedState);
     };
 
     // move preview to the previous set of pages
@@ -34,8 +34,9 @@ const Preview = () => {
     useEffect(() => {
         if (sharedState.loaded) {
             console.log("Preview:  loaded triggers");
+            console.log(sharedState);
         }
-    }, [sharedState.loaded, sharedState.foldedPDF]);
+    }, [sharedState]);
 
     return (
         <div>

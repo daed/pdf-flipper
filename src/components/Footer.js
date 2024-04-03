@@ -17,21 +17,21 @@ const Footer = () => {
                 </p>
             </Box>
             <Box textAlign="left" maxWidth="35%" paddingLeft="6px" marginRight="6px" position="relative" bottom={0}>
-                <p display="flex" height={"100%"} flexDirection={"column-reverse"} padding={"0 0 0px 0"}>
+                <div display="flex" height={"100%"} flexDirection={"column-reverse"} padding={"0 0 0px 0"}>
                     <Donation></Donation>
-                </p>
+                </div>
             </Box>
             <Box textAlign="left" maxWidth="35%" paddingLeft="6px" marginRight="6px" position="relative" bottom={0}>
-                <p textAlign="right">
-                    <Box textAlign="right"> 
+                <div textAlign="right">
+                    <p textAlign="right"> 
                         imposify v{version}
-                    </Box>
-                </p>
-                <p>
-                    <Box textAlign="right">
+                    </p>
+                </div>
+                <div>
+                    <p textAlign="right">
                         <a href="https://github.com/daed/imposify">github page!</a>
-                    </Box>
-                </p>
+                    </p>
+                </div>
             </Box>
         </Box>
     );

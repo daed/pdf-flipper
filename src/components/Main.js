@@ -76,9 +76,10 @@ const Main = () => {
             // generate blob from pdf
             if (completedPdf) {
                 const blob = new Blob([completedPdf], { type: "application/pdf" });
+                console.log(`blob: ${blob}`);
                 console.log("setting state for preview rendering")
-                setSharedState({...sharedState, foldedPDF: blob});
-                setSharedState({...sharedState, loaded: true});
+                setSharedState({...sharedState, foldedPDF: blob, loaded: true});
+                console.log(sharedState);
             }
             else {
                 throw new Error(`completedPDF was ${completedPDF}`);
@@ -90,16 +91,20 @@ const Main = () => {
         setTimeout(() => setSpinner(false), 1250);
     };
 
-
-    // we have to calculate the size of the preview canvas outside of css
     const handleResize = () => {
-        if (window.innerWidth > 599) {
-            setSharedState({...sharedState, previewWidth: window.innerWidth * 0.4});
-        } else {
-            setSharedState({...sharedState, previewWidth: window.innerWidth * 0.8});
-        }
+        setSharedState(currentState => {
+            const newPreviewWidth = window.innerWidth > 599 ? window.innerWidth * 0.4 : window.innerWidth * 0.8;
+            return {...currentState, previewWidth: newPreviewWidth};
+        });
     };
 
+    useEffect(() => {
+        setSharedState(currentState => {
+            const newPreviewWidth = window.innerWidth > 599 ? window.innerWidth * 0.4 : window.innerWidth * 0.8;
+            return {...currentState, previewWidth: newPreviewWidth};
+        });
+    }, []);
+    
     const handleOpenButtonClick = () => {
         // Programmatically click the hidden file input
         fileInputRef.current.click();
